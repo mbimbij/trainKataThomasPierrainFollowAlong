@@ -1,5 +1,7 @@
 package com.example.trainkata;
 
+import java.util.Objects;
+
 public class Seat {
     public final String coach;
     public final int seatNumber;
@@ -9,8 +11,17 @@ public class Seat {
         this.seatNumber = seatNumber;
     }
 
+    @Override
     public boolean equals(Object o) {
-        Seat other = (Seat)o;
-        return coach==other.coach && seatNumber==other.seatNumber;
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Seat seat = (Seat) o;
+        return seatNumber == seat.seatNumber &&
+                Objects.equals(coach, seat.coach);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(coach, seatNumber);
     }
 }

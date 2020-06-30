@@ -1,7 +1,7 @@
 """
 Use this script to start the Train Data Service on port 8081
 """
-using_flask = False
+using_flask = True
 
 def main(args):
     if args:

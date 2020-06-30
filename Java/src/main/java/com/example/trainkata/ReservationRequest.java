@@ -1,10 +1,10 @@
 package com.example.trainkata;
 
 public class ReservationRequest {
-	public final String trainId;
+	public final TrainId trainId;
     public final int seatCount;
 
-    public ReservationRequest(String trainId, int seatCount) {
+    public ReservationRequest(TrainId trainId, int seatCount) {
 		this.trainId = trainId;
         this.seatCount = seatCount;
     }
