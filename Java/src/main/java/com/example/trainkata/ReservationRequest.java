@@ -1,3 +1,4 @@
+package com.example.trainkata;
 
 public class ReservationRequest {
 	public final String trainId;

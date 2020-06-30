@@ -1,3 +1,4 @@
+package com.example.trainkata;
 
 public class Seat {
     public final String coach;

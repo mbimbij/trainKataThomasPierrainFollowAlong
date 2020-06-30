@@ -1,3 +1,5 @@
+package com.example.trainkata;
+
 import java.util.List;
 
 public class Reservation {
