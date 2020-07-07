@@ -3,6 +3,7 @@ package com.example.trainkata;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -51,7 +52,7 @@ class TicketOfficeTest {
 
         TrainId trainId = new TrainId("express2000");
         IProvideTrainData trainDataProvider = mock(IProvideTrainData.class);
-        doReturn(trainWith1Coach3SeatsAnd1Available()).when(trainDataProvider).getSeats(trainId);
+        doReturn(Optional.of(trainWith1Coach3SeatsAnd1Available(trainId))).when(trainDataProvider).getTrain(trainId);
 
         // WHEN
         TicketOffice ticketOffice = new TicketOffice(bookingReferenceProvider, trainDataProvider, 0.7);
@@ -66,7 +67,11 @@ class TicketOfficeTest {
         verify(trainDataProvider).reserveSeats(trainId, List.of(new Seat("A", 2)), expectedBookingId);
     }
 
-    private List<SeatWithBookingReference> trainWith1Coach3SeatsAnd1Available() {
+    private Train trainWith1Coach3SeatsAnd1Available(TrainId trainId) {
+        return new Train(trainId, seatsWith1Coach3SeatsAnd1Available());
+    }
+
+    private List<SeatWithBookingReference> seatsWith1Coach3SeatsAnd1Available() {
         return List.of(
                 new SeatWithBookingReference("A", 1, new BookingReferenceId("34Dsq")),
                 new SeatWithBookingReference("A", 2, BookingReferenceId.NULL),
