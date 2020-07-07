@@ -13,11 +13,17 @@ public class Train {
         totalNbOfSeats = seatsWithBookingReferences.size();
     }
 
-    public TrainId getTrainId() {
-        return trainId;
-    }
-
     public int getTotalNbOfSeats() {
         return totalNbOfSeats;
+    }
+
+    public ReservationOption reserve(int seatCount) {
+        ReservationOption reservationOption = new ReservationOption(trainId, seatCount);
+        seatsWithBookingReferences.stream()
+                .filter(SeatWithBookingReference::isAvailable)
+                .limit(seatCount)
+                .map(Seat::new)
+                .forEach(reservationOption::addSeatReservation);
+        return reservationOption;
     }
 }

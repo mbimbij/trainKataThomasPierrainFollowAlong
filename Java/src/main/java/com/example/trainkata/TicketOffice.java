@@ -19,19 +19,15 @@ public class TicketOffice {
 
     public Reservation makeReservation(ReservationRequest request) {
         Train train = trainDataProvider.getTrain(request.trainId).orElseThrow(() -> new UnknownTrainException(String.format("train with id=%s is unknown", request.trainId)));
-
-        if(request.seatCount > train.getTotalNbOfSeats()*threshold){
+        if (request.seatCount > train.getTotalNbOfSeats() * threshold) {
             throw new MaxReservationThresholdException(String.format("cannot book more than %s percent of the train", threshold * 100));
         }
 
-        List<Seat> reservedSeats = train.stream()
-                .filter(SeatWithBookingReference::isAvailable)
-                .limit(request.seatCount)
-                .map(Seat::new)
-                .collect(Collectors.toList());
+        ReservationOption reservationOption = train.reserve(request.seatCount);
 
-        if (reservedSeats.size() >= request.seatCount) {
+        if (reservationOption.isFullfilled()) {
             BookingReferenceId bookingReferenceId = bookingReferenceProvider.getBookingReferenceId();
+            List<Seat> reservedSeats = reservationOption.getReservedSeats();
             trainDataProvider.reserveSeats(request.trainId, reservedSeats, bookingReferenceId);
             return new Reservation(request.trainId, reservedSeats, bookingReferenceId);
         } else {
