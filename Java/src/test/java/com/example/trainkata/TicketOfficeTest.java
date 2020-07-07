@@ -2,12 +2,12 @@ package com.example.trainkata;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -18,15 +18,9 @@ class TicketOfficeTest {
         IProvideBookingReferences bookingReferenceProvider = mock(IProvideBookingReferences.class);
         doReturn(expectedBookingId).when(bookingReferenceProvider).getBookingReferenceId();
         IProvideTrainData trainDataProvider = mock(IProvideTrainData.class);
-        doReturn(
-                List.of(new SeatWithBookingReference("A", 1, new BookingReferenceId("")),
-                        new SeatWithBookingReference("A", 2, new BookingReferenceId("")),
-                        new SeatWithBookingReference("A", 3, new BookingReferenceId("")),
-                        new SeatWithBookingReference("A", 4, new BookingReferenceId("")))
-        )
-                .when(trainDataProvider).getSeats(any(TrainId.class));
+        doReturn(emptyTrainWith1CoachAndNSeatsAvailable("A", 6)).when(trainDataProvider).getSeats(any(TrainId.class));
 
-        TicketOffice ticketOffice = new TicketOffice(bookingReferenceProvider, trainDataProvider);
+        TicketOffice ticketOffice = new TicketOffice(bookingReferenceProvider, trainDataProvider, 0.7);
 
         TrainId trainId = new TrainId("express_2000");
         ReservationRequest reservationRequest = new ReservationRequest(trainId, 3);
@@ -42,6 +36,12 @@ class TicketOfficeTest {
                         new Seat("A", 3));
     }
 
+    private List<SeatWithBookingReference> emptyTrainWith1CoachAndNSeatsAvailable(String coach, int nbSeatsAvailable) {
+        return IntStream.rangeClosed(1, nbSeatsAvailable)
+                .mapToObj(i -> new SeatWithBookingReference(coach, i, BookingReferenceId.NULL))
+                .collect(Collectors.toList());
+    }
+
     @Test
     void shouldMarkSeatsAsReserved_whenReserved() {
         // GIVEN
@@ -51,15 +51,10 @@ class TicketOfficeTest {
 
         TrainId trainId = new TrainId("express2000");
         IProvideTrainData trainDataProvider = mock(IProvideTrainData.class);
-        doReturn(List.of(
-                new SeatWithBookingReference("A", 1, new BookingReferenceId("34Dsq")),
-                new SeatWithBookingReference("A", 2, BookingReferenceId.NULL),
-                new SeatWithBookingReference("A", 3, new BookingReferenceId("34Dsq"))
-        ))
-                .when(trainDataProvider).getSeats(trainId);
+        doReturn(trainWith1Coach3SeatsAnd1Available()).when(trainDataProvider).getSeats(trainId);
 
         // WHEN
-        TicketOffice ticketOffice = new TicketOffice(bookingReferenceProvider, trainDataProvider);
+        TicketOffice ticketOffice = new TicketOffice(bookingReferenceProvider, trainDataProvider, 0.7);
         Reservation reservation = ticketOffice.makeReservation(new ReservationRequest(trainId, 1));
 
         // THEN le siège réservé est bien le "A2"
@@ -68,43 +63,30 @@ class TicketOfficeTest {
         assertThat(reservation.seats).containsExactly(new Seat("A", 2));
 
         // AND on a appelé la méthode de réservation de l'opérateur historique
-        verify(trainDataProvider).reserveSeats(trainId,List.of(new Seat("A", 2)),expectedBookingId);
+        verify(trainDataProvider).reserveSeats(trainId, List.of(new Seat("A", 2)), expectedBookingId);
     }
 
-    private interface IProvideBookingReferences {
-        BookingReferenceId getBookingReferenceId();
+    private List<SeatWithBookingReference> trainWith1Coach3SeatsAnd1Available() {
+        return List.of(
+                new SeatWithBookingReference("A", 1, new BookingReferenceId("34Dsq")),
+                new SeatWithBookingReference("A", 2, BookingReferenceId.NULL),
+                new SeatWithBookingReference("A", 3, new BookingReferenceId("34Dsq"))
+        );
     }
 
-    public static class TicketOffice {
+    @Test
+    void shouldNotReserverMore70PercentOfSeatsForOverallTrain() {
+        // GIVEN
+        BookingReferenceId expectedBookingId = new BookingReferenceId("75bcd15");
+        TrainId trainId = new TrainId("express2000");
+        IProvideBookingReferences bookingReferenceProvider = mock(IProvideBookingReferences.class);
+        IProvideTrainData trainDataProvider = mock(IProvideTrainData.class);
+        TicketOffice ticketOffice = new TicketOffice(bookingReferenceProvider, trainDataProvider, 0.7);
+        List<SeatWithBookingReference> trainTopology = emptyTrainWith1CoachAndNSeatsAvailable("A", 10);
+        doReturn(expectedBookingId).when(bookingReferenceProvider).getBookingReferenceId();
+        doReturn(trainTopology).when(trainDataProvider).getSeats(trainId);
 
-        private final IProvideBookingReferences bookingReferenceProvider;
-        private final IProvideTrainData trainDataProvider;
-
-        public TicketOffice(IProvideBookingReferences bookingReferenceProvider, IProvideTrainData trainDataProvider) {
-            this.bookingReferenceProvider = bookingReferenceProvider;
-            this.trainDataProvider = trainDataProvider;
-        }
-
-        public Reservation makeReservation(ReservationRequest request) {
-            List<Seat> reservedSeats = trainDataProvider.getSeats(request.trainId).stream()
-                    .filter(SeatWithBookingReference::isAvailable)
-                    .limit(request.seatCount)
-                    .map(Seat::new)
-                    .collect(Collectors.toList());
-            if (reservedSeats.size() >= request.seatCount) {
-                BookingReferenceId bookingReferenceId = bookingReferenceProvider.getBookingReferenceId();
-                trainDataProvider.reserveSeats(request.trainId, reservedSeats, bookingReferenceId);
-                return new Reservation(request.trainId, reservedSeats, bookingReferenceId);
-            } else {
-                return new Reservation(request.trainId, Collections.emptyList(), new BookingReferenceId(""));
-            }
-        }
+        // WHEN
+        assertThatThrownBy(() -> ticketOffice.makeReservation(new ReservationRequest(trainId, 8))).isInstanceOf(MaxReservationThresholdException.class);
     }
-
-    private interface IProvideTrainData {
-        Collection<SeatWithBookingReference> getSeats(TrainId trainId);
-
-        void reserveSeats(TrainId trainId, Collection<Seat> seats, BookingReferenceId bookingReferenceid);
-    }
-
 }
