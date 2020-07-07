@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -14,7 +13,7 @@ import static org.mockito.Mockito.*;
 
 class TicketOfficeTest {
     @Test
-    void should_reserve_seats_when_unreserved_seats_are_available() {
+    void shouldReserveSeats_whenUnreservedSeatsAreAvailable() {
         BookingReferenceId expectedBookingId = new BookingReferenceId("expectedBookingId");
         IProvideBookingReferences bookingReferenceProvider = mock(IProvideBookingReferences.class);
         doReturn(expectedBookingId).when(bookingReferenceProvider).getBookingReferenceId();
@@ -26,13 +25,6 @@ class TicketOfficeTest {
                         new SeatWithBookingReference("A", 4, new BookingReferenceId("")))
         )
                 .when(trainDataProvider).getSeats(any(TrainId.class));
-        doAnswer(invocation -> {
-            List<SeatWithBookingReference> seatsArgument = invocation.getArgument(1, List.class);
-            BookingReferenceId bookingReferenceIdArgument = invocation.getArgument(2, BookingReferenceId.class);
-            return seatsArgument.stream()
-                    .map(seat -> new SeatWithBookingReference(seat.coach, seat.seatNumber, bookingReferenceIdArgument))
-                    .collect(Collectors.toList());
-        }).when(trainDataProvider).reserveSeats(any(TrainId.class), anyCollection(), any(BookingReferenceId.class));
 
         TicketOffice ticketOffice = new TicketOffice(bookingReferenceProvider, trainDataProvider);
 
@@ -45,9 +37,38 @@ class TicketOfficeTest {
         assertThat(reservation.seats)
                 .usingFieldByFieldElementComparator()
                 .containsExactlyInAnyOrder(
-                        new SeatWithBookingReference("A", 1, expectedBookingId),
-                        new SeatWithBookingReference("A", 2, expectedBookingId),
-                        new SeatWithBookingReference("A", 3, expectedBookingId));
+                        new Seat("A", 1),
+                        new Seat("A", 2),
+                        new Seat("A", 3));
+    }
+
+    @Test
+    void shouldMarkSeatsAsReserved_whenReserved() {
+        // GIVEN
+        BookingReferenceId expectedBookingId = new BookingReferenceId("75bcd15");
+        IProvideBookingReferences bookingReferenceProvider = mock(IProvideBookingReferences.class);
+        doReturn(expectedBookingId).when(bookingReferenceProvider).getBookingReferenceId();
+
+        TrainId trainId = new TrainId("express2000");
+        IProvideTrainData trainDataProvider = mock(IProvideTrainData.class);
+        doReturn(List.of(
+                new SeatWithBookingReference("A", 1, new BookingReferenceId("34Dsq")),
+                new SeatWithBookingReference("A", 2, BookingReferenceId.NULL),
+                new SeatWithBookingReference("A", 3, new BookingReferenceId("34Dsq"))
+        ))
+                .when(trainDataProvider).getSeats(trainId);
+
+        // WHEN
+        TicketOffice ticketOffice = new TicketOffice(bookingReferenceProvider, trainDataProvider);
+        Reservation reservation = ticketOffice.makeReservation(new ReservationRequest(trainId, 1));
+
+        // THEN le siège réservé est bien le "A2"
+        assertThat(reservation.trainId).isEqualTo(trainId);
+        assertThat(reservation.bookingId).isEqualTo(expectedBookingId);
+        assertThat(reservation.seats).containsExactly(new Seat("A", 2));
+
+        // AND on a appelé la méthode de réservation de l'opérateur historique
+        verify(trainDataProvider).reserveSeats(trainId,List.of(new Seat("A", 2)),expectedBookingId);
     }
 
     private interface IProvideBookingReferences {
@@ -65,25 +86,25 @@ class TicketOfficeTest {
         }
 
         public Reservation makeReservation(ReservationRequest request) {
-            List<SeatWithBookingReference> reservedSeats = trainDataProvider.getSeats(request.trainId).stream()
+            List<Seat> reservedSeats = trainDataProvider.getSeats(request.trainId).stream()
                     .filter(SeatWithBookingReference::isAvailable)
                     .limit(request.seatCount)
+                    .map(Seat::new)
                     .collect(Collectors.toList());
             if (reservedSeats.size() >= request.seatCount) {
                 BookingReferenceId bookingReferenceId = bookingReferenceProvider.getBookingReferenceId();
-                Collection<SeatWithBookingReference> confirmedSeats = trainDataProvider.reserveSeats(request.trainId, reservedSeats, bookingReferenceId);
-                return new Reservation(request.trainId, confirmedSeats, bookingReferenceId);
+                trainDataProvider.reserveSeats(request.trainId, reservedSeats, bookingReferenceId);
+                return new Reservation(request.trainId, reservedSeats, bookingReferenceId);
             } else {
                 return new Reservation(request.trainId, Collections.emptyList(), new BookingReferenceId(""));
             }
         }
-
     }
 
     private interface IProvideTrainData {
         Collection<SeatWithBookingReference> getSeats(TrainId trainId);
 
-        Collection<SeatWithBookingReference> reserveSeats(TrainId trainId, Collection<SeatWithBookingReference> seats, BookingReferenceId bookingReferenceid);
+        void reserveSeats(TrainId trainId, Collection<Seat> seats, BookingReferenceId bookingReferenceid);
     }
 
 }

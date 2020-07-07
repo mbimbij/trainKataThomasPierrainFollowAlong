@@ -11,6 +11,11 @@ public class Seat {
         this.seatNumber = seatNumber;
     }
 
+    public Seat(SeatWithBookingReference seatWithBookingReference){
+        this.coach = seatWithBookingReference.coach;
+        this.seatNumber = seatWithBookingReference.seatNumber;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

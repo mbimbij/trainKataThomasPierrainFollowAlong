@@ -1,7 +1,5 @@
 package com.example.trainkata;
 
-import org.apache.commons.lang3.StringUtils;
-
 public class SeatWithBookingReference extends Seat {
     public final BookingReferenceId bookingReferenceid;
 
@@ -11,7 +9,7 @@ public class SeatWithBookingReference extends Seat {
     }
 
     public boolean isAvailable() {
-        return StringUtils.isBlank(bookingReferenceid.getValue());
+        return bookingReferenceid.isNull();
     }
 
 }
