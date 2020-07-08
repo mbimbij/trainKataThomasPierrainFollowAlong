@@ -30,11 +30,10 @@ class TicketOfficeTest {
         assertThat(reservation.trainId).isEqualTo(trainId);
         assertThat(reservation.bookingId).isEqualTo(expectedBookingId);
         assertThat(reservation.seats)
-                .usingFieldByFieldElementComparator()
-                .containsExactlyInAnyOrder(
-                        new Seat("A", 1),
-                        new Seat("A", 2),
-                        new Seat("A", 3));
+                .isEqualTo(new Seats()
+                        .add(new Seat("A", 1))
+                        .add(new Seat("A", 2))
+                        .add(new Seat("A", 3)));
     }
 
     private Train emptyTrainWith1CoachAndNSeatsAvailable(TrainId trainId, String coach, int nbSeatsAvailable) {
@@ -43,7 +42,7 @@ class TicketOfficeTest {
 
     private List<SeatWithBookingReference> emptySeatsWith1CoachAndNSeatsAvailable(String coach, int nbSeatsAvailable) {
         return IntStream.rangeClosed(1, nbSeatsAvailable)
-                .mapToObj(i -> new SeatWithBookingReference(coach, i, BookingReferenceId.NULL))
+                .mapToObj(i -> new SeatWithBookingReference(coach, i, new BookingReferenceId.Null()))
                 .collect(Collectors.toList());
     }
 
@@ -65,10 +64,10 @@ class TicketOfficeTest {
         // THEN le siège réservé est bien le "A2"
         assertThat(reservation.trainId).isEqualTo(trainId);
         assertThat(reservation.bookingId).isEqualTo(expectedBookingId);
-        assertThat(reservation.seats).containsExactly(new Seat("A", 2));
+        assertThat(reservation.seats).isEqualTo(new Seats().add(new Seat("A", 2)));
 
         // AND on a appelé la méthode de réservation de l'opérateur historique
-        verify(trainDataProvider).reserveSeats(trainId, List.of(new Seat("A", 2)), expectedBookingId);
+        verify(trainDataProvider).reserveSeats(trainId, new Seats().add(new Seat("A", 2)), expectedBookingId);
     }
 
     private Train trainWith1Coach3SeatsAnd1Available(TrainId trainId) {
@@ -78,7 +77,7 @@ class TicketOfficeTest {
     private List<SeatWithBookingReference> seatsWith1Coach3SeatsAnd1Available() {
         return List.of(
                 new SeatWithBookingReference("A", 1, new BookingReferenceId("34Dsq")),
-                new SeatWithBookingReference("A", 2, BookingReferenceId.NULL),
+                new SeatWithBookingReference("A", 2, new BookingReferenceId.Null()),
                 new SeatWithBookingReference("A", 3, new BookingReferenceId("34Dsq"))
         );
     }

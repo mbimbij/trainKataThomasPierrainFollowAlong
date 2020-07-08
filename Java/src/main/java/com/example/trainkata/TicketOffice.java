@@ -27,11 +27,11 @@ public class TicketOffice {
 
         if (reservationOption.isFullfilled()) {
             BookingReferenceId bookingReferenceId = bookingReferenceProvider.getBookingReferenceId();
-            List<Seat> reservedSeats = reservationOption.getReservedSeats();
+            Seats reservedSeats = reservationOption.getReservedSeats();
             trainDataProvider.reserveSeats(request.trainId, reservedSeats, bookingReferenceId);
             return new Reservation(request.trainId, reservedSeats, bookingReferenceId);
         } else {
-            return new Reservation(request.trainId, Collections.emptyList(), new BookingReferenceId(""));
+            return new Reservation(request.trainId, new Seats.Empty(), new BookingReferenceId(""));
         }
     }
 }

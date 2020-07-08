@@ -6,7 +6,7 @@ import java.util.List;
 public class ReservationOption {
     private final TrainId trainId;
     private final int seatCount;
-    private final List<Seat> reservedSeats = new ArrayList<>();
+    private final Seats reservedSeats = new Seats();
 
     public ReservationOption(TrainId trainId, int seatCount) {
         this.trainId = trainId;
@@ -21,7 +21,7 @@ public class ReservationOption {
         return reservedSeats.size() == seatCount;
     }
 
-    public List<Seat> getReservedSeats() {
+    public Seats getReservedSeats() {
         return reservedSeats;
     }
 }
