@@ -14,4 +14,8 @@ public class ReservationOption {
     public List<Seat> getSeats() {
         return seats;
     }
+
+    public boolean isFulfilled() {
+        return seatCount == seats.size();
+    }
 }

@@ -1,5 +1,7 @@
 package com.example.trainkata;
 
+import java.util.Collections;
+
 public class TicketOfficeV2 implements TicketOffice {
 
     private final IProvideBookingReferences bookingReferenceProvider;
@@ -17,8 +19,12 @@ public class TicketOfficeV2 implements TicketOffice {
                 .orElseThrow(() -> new IllegalArgumentException(String.format("train not found : %s", request.trainId)));
 
         ReservationOption reservationOption = train.reserve(request.seatCount);
-        BookingReferenceId bookingReferenceId = bookingReferenceProvider.getBookingReferenceId();
-        trainDataProvider.reserveSeats(request.trainId, reservationOption.getSeats(), bookingReferenceId);
-        return new Reservation(request.trainId, reservationOption.getSeats(), bookingReferenceId);
+        if (reservationOption.isFulfilled()) {
+            BookingReferenceId bookingReferenceId = bookingReferenceProvider.getBookingReferenceId();
+            trainDataProvider.reserveSeats(request.trainId, reservationOption.getSeats(), bookingReferenceId);
+            return new Reservation(request.trainId, reservationOption.getSeats(), bookingReferenceId);
+        } else {
+            return new Reservation(request.trainId, Collections.emptyList(),BookingReferenceId.NULL);
+        }
     }
 }
