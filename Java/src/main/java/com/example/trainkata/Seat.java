@@ -29,4 +29,12 @@ public class Seat {
     public int hashCode() {
         return Objects.hash(coach, seatNumber);
     }
+
+    @Override
+    public String toString() {
+        return "Seat{" +
+                "coach='" + coach + '\'' +
+                ", seatNumber=" + seatNumber +
+                '}';
+    }
 }
